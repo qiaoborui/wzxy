@@ -1,0 +1,38 @@
+name: Build wozaixiaoyuan
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go-version: ['1.20']
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Go ${{ matrix.go-version }}
+        uses: actions/setup-go@v3
+        with:
+          go-version: ${{ matrix.go-version }}
+
+      - name: Build for Linux/arm64
+        run: GOOS=linux GOARCH=arm64 go build -o wozaixiaoyuan-linux-arm64 wozaixiaoyuan.go
+
+      - name: Build for Windows/amd64
+        run: GOOS=windows GOARCH=amd64 go build -o wozaixiaoyuan-windows-amd64.exe wozaixiaoyuan.go
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: executables
+          path: |
+            wozaixiaoyuan-linux-arm64
+            wozaixiaoyuan-windows-amd64.exe
