@@ -13,10 +13,7 @@ type Response struct {
 	Results []User `json:"results"`
 }
 
-func FetchUsers() Response {
-	return FetchData("{\"status\": 1 }")
-}
-func FetchData(condition string) Response {
+func FetchData(condition string) (Response, error) {
 	client := &http.Client{}
 	Url, _ := url.Parse(APPURL)
 	params := url.Values{}
@@ -27,18 +24,24 @@ func FetchData(condition string) Response {
 	req.Header.Add("X-LC-Id", APPID)
 	req.Header.Add("X-LC-Key", APPKEY)
 	req.Header.Add("Content-Type", "application/json")
-	resp, _ := client.Do(req)
+	resp, err := client.Do(req)
+	if err != nil {
+		return Response{}, err
+	}
 	defer resp.Body.Close()
 	body, _ := io.ReadAll(resp.Body)
 	var response Response
-	json.Unmarshal(body, &response)
+	err = json.Unmarshal(body, &response)
+	if err != nil {
+		return Response{}, err
+	}
 	sort.Slice(response.Results, func(i, j int) bool {
 		if response.Results[i].IsEnable > response.Results[j].IsEnable {
 			return true
 		}
 		return false
 	})
-	return response
+	return response, nil
 }
 
 func DisableUsers(id string) bool {

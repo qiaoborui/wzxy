@@ -12,7 +12,11 @@ import (
 func main() {
 	start := time.Now()
 	var wg sync.WaitGroup
-	storage := utils.FetchUsers()
+	storage, err := utils.FetchData("{\"status\": 1 }")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 	results := make(chan string, 10)
 	var users []*wzxy.User
 	if len(storage.Results) == 0 {
