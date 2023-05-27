@@ -10,7 +10,6 @@ import (
 
 // TEST GITHUB ACTION
 func main() {
-	start := time.Now()
 	var wg sync.WaitGroup
 	storage, err := utils.FetchData("{\"status\": 1 }")
 	if err != nil {
@@ -23,6 +22,7 @@ func main() {
 		fmt.Println("没有需要打卡的用户")
 		return
 	}
+ start := time.Now()
 	for _, user := range storage.Results {
 		users = append(users, &wzxy.User{
 			RealName: user.RealName,
