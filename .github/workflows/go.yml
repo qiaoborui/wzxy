@@ -29,6 +29,9 @@ jobs:
       - name: Build for Windows/amd64
         run: GOOS=windows GOARCH=amd64 go build -o wozaixiaoyuan-windows-amd64.exe wozaixiaoyuan.go
 
+      - name: Build for Linux/amd64
+        run: GOOS=linux GOARCH=amd64 go build -o wozaixiaoyuan-linux-amd64 wozaixiaoyuan.go
+
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:
@@ -36,3 +39,4 @@ jobs:
           path: |
             wozaixiaoyuan-linux-arm64
             wozaixiaoyuan-windows-amd64.exe
+            wozaixiaoyuan-linux-amd64
