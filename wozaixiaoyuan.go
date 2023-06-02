@@ -65,7 +65,7 @@ func main() {
 		if len(users) != 0 {
 			doWork(users)
 		}
-		time.Sleep(5 * time.Second)
+		time.Sleep(5 * time.Minute)
 	}
 }
 func doWork(users []*wzxy.User) {
