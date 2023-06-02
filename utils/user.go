@@ -6,4 +6,6 @@ type User struct {
 	Password  string `json:"passwd"`
 	IsEnable  int    `json:"status"`
 	Jwsession string `json:"cache"`
+	Start     string `json:"start"`
+	End       string `json:"end"`
 }
