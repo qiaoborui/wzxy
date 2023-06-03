@@ -157,20 +157,22 @@ func startLogServer() {
 			log.Fatal(err)
 		}
 	}
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "logs/")
-	})
+	go func() {
+		http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+			http.ServeFile(w, r, "logs/")
+		})
 
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-	}
+		port := os.Getenv("PORT")
+		if port == "" {
+			port = "8080"
+		}
 
-	host := os.Getenv("wzxy_HOST")
-	if host == "" {
-		host = "0.0.0.0"
-	}
+		host := os.Getenv("wzxy_HOST")
+		if host == "" {
+			host = "0.0.0.0"
+		}
 
-	fmt.Printf("Server listening on http://%s:%s\n", host, port)
-	http.ListenAndServe(host+":"+port, nil)
+		fmt.Printf("Server listening on http://%s:%s\n", host, port)
+		http.ListenAndServe(host+":"+port, nil)
+	}()
 }
