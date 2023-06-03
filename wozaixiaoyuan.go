@@ -157,15 +157,20 @@ func startLogServer() {
 			log.Fatal(err)
 		}
 	}
-	port := os.Getenv("PORT") // 读取环境变量中的端口号
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "logs/")
+	})
+
+	port := os.Getenv("PORT")
 	if port == "" {
-		port = "8000" // 默认端口号为8000
+		port = "8080"
 	}
 
-	go func() {
-		fs := http.FileServer(http.Dir("./logs"))
-		// 监听指定的端口号
-		log.Printf("Listening on :%s...\n", port)
-		_ = http.ListenAndServe(":"+port, fs)
-	}()
+	host := os.Getenv("wzxy_HOST")
+	if host == "" {
+		host = "0.0.0.0"
+	}
+
+	fmt.Printf("Server listening on http://%s:%s\n", host, port)
+	http.ListenAndServe(host+":"+port, nil)
 }
