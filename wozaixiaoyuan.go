@@ -14,6 +14,7 @@ import (
 
 // TEST GITHUB ACTION
 func main() {
+	initInMain()
 	log.SetFlags(log.Ltime | log.Ldate)
 	startLogServer()
 	dateNow := getDate()
@@ -175,4 +176,8 @@ func startLogServer() {
 		fmt.Printf("Server listening on http://%s:%s\n", host, port)
 		http.ListenAndServe(host+":"+port, nil)
 	}()
+}
+func initInMain() {
+	var cstZone = time.FixedZone("CST", 8*3600) // 东八
+	time.Local = cstZone
 }
