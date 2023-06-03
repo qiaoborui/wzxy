@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net/http"
 	"os"
 	"sync"
 	"time"
@@ -14,12 +15,7 @@ import (
 // TEST GITHUB ACTION
 func main() {
 	log.SetFlags(log.Ltime | log.Ldate)
-	if _, err := os.Stat("logs"); os.IsNotExist(err) {
-		err = os.Mkdir("logs", 0755)
-		if err != nil {
-			log.Fatal(err)
-		}
-	}
+	startLogServer()
 	dateNow := getDate()
 	dateTmp := ""
 	timeTmp := time.Now()
@@ -153,4 +149,23 @@ func CompareTime(inputTime string) bool {
 		//fmt.Printf("%s is before current time %s", inputTime, currentTime.Format(layout))
 		return false
 	}
+}
+func startLogServer() {
+	if _, err := os.Stat("logs"); os.IsNotExist(err) {
+		err = os.Mkdir("logs", 0755)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+	port := os.Getenv("PORT") // 读取环境变量中的端口号
+	if port == "" {
+		port = "8000" // 默认端口号为8000
+	}
+
+	go func() {
+		fs := http.FileServer(http.Dir("./logs"))
+		// 监听指定的端口号
+		log.Printf("Listening on :%s...\n", port)
+		_ = http.ListenAndServe(":"+port, fs)
+	}()
 }
