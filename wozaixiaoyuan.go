@@ -160,7 +160,7 @@ func startLogServer() {
 	}
 	go func() {
 		http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-			http.ServeFile(w, r, "logs/")
+			http.FileServer(http.Dir("logs")).ServeHTTP(w, r)
 		})
 
 		port := os.Getenv("PORT")
