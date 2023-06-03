@@ -14,10 +14,11 @@ import (
 
 // TEST GITHUB ACTION
 func main() {
-	initInMain()
+	setTime()
 	log.SetFlags(log.Ltime | log.Ldate)
 	startLogServer()
-	dateNow := getDate()
+
+	dateNow := time.Now().Format("20060102")
 	dateTmp := ""
 	timeTmp := time.Now()
 	storage, err := utils.FetchData("{\"status\": 1 }")
@@ -28,6 +29,7 @@ func main() {
 	}
 	for {
 		timeNow := time.Now()
+		// 每 30 分钟更新一次数据
 		if timeNow.Sub(timeTmp).Minutes() >= 30 {
 			timeTmp = timeNow
 			storage, err = utils.FetchData("{\"status\": 1 }")
@@ -36,15 +38,18 @@ func main() {
 				return
 			}
 		}
+		// 每天重置一次打卡次数
 		if dateNow != dateTmp {
 			dateTmp = dateNow
 			for _, user := range storage.Results {
 				eventMap[user.RealName] = 0
 			}
 		}
+
 		var users []*wzxy.User
 		results := make(chan string, 10)
 		for _, user := range storage.Results {
+			// 如果当前时间在用户设置的时间范围内，并且用户今天还没有打过卡
 			if !CompareTime(user.Start) && CompareTime(user.End) && eventMap[user.RealName] < 2 {
 				users = append(users, &wzxy.User{
 					RealName: user.RealName,
@@ -76,17 +81,11 @@ func doWork(users []*wzxy.User) {
 	}
 	var wg sync.WaitGroup
 	start := time.Now()
-
 	maxConcurrent := 10
-
 	// 用来控制最大并发数量
 	sem := make(chan struct{}, maxConcurrent)
-
 	// 用来接收已签到的wzxy对象
 	successCh := make(chan *wzxy.Session, len(users))
-
-	//var wg sync.WaitGroup
-
 	for _, user := range users {
 		w := wzxy.NewWzxy(user)
 		sem <- struct{}{}
@@ -94,18 +93,14 @@ func doWork(users []*wzxy.User) {
 		go func(w *wzxy.Session) {
 			defer func() { <-sem }()
 			defer wg.Done()
-
 			if err := w.Login(); err != nil {
 				fmt.Printf("[%s] login failed: %v\n", w.User.RealName, err)
 				return
 			}
-
 			_ = w.Sign()
-
 			successCh <- w
 		}(w)
 	}
-
 	wg.Wait()
 	close(sem)
 	close(successCh)
@@ -118,9 +113,11 @@ func doWork(users []*wzxy.User) {
 	log.Printf("程序运行时间为：%s \n", elapsed)
 	_ = logFile.Close()
 }
-func getDate() string {
-	return time.Now().Format("20060102")
-}
+
+// CompareTime @Title CompareTime
+// @Description 比较输入时间和当前时间的大小
+// @Param inputTime string 输入时间
+// @Success bool
 func CompareTime(inputTime string) bool {
 	//构造包含当前日期的字符串
 	dateStr := time.Now().Format("2006-01-02") //使用Go语言规定的"2006-01-02"作为日期格式
@@ -135,10 +132,8 @@ func CompareTime(inputTime string) bool {
 		fmt.Println(err)
 		return false
 	}
-
 	//获取当前时间
 	currentTime := time.Now()
-
 	//比较当前时间和输入时间的差值
 	if t.After(currentTime) {
 		//fmt.Printf("%s is after current time %s", inputTime, currentTime.Format(layout))
@@ -151,6 +146,9 @@ func CompareTime(inputTime string) bool {
 		return false
 	}
 }
+
+// @Title startLogServer
+// @Description 启动日志服务器
 func startLogServer() {
 	if _, err := os.Stat("logs"); os.IsNotExist(err) {
 		err = os.Mkdir("logs", 0755)
@@ -177,7 +175,7 @@ func startLogServer() {
 		http.ListenAndServe(host+":"+port, nil)
 	}()
 }
-func initInMain() {
+func setTime() {
 	var cstZone = time.FixedZone("CST", 8*3600) // 东八
 	time.Local = cstZone
 }
