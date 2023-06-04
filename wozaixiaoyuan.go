@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"net/http"
 	"os"
 	"sync"
 	"time"
+	"wobuzaixiaoyuan/logServer"
 	"wobuzaixiaoyuan/utils"
 	"wobuzaixiaoyuan/wzxy"
 )
@@ -16,8 +16,7 @@ import (
 func main() {
 	setTime()
 	log.SetFlags(log.Ltime | log.Ldate)
-	startLogServer()
-
+	logServer.StartLogServer()
 	dateNow := time.Now().Format("20060102")
 	dateTmp := ""
 	timeTmp := time.Now()
@@ -50,7 +49,7 @@ func main() {
 		results := make(chan string, 10)
 		for _, user := range storage.Results {
 			// 如果当前时间在用户设置的时间范围内，并且用户今天还没有打过卡
-			if !CompareTime(user.Start) && CompareTime(user.End) && eventMap[user.RealName] < 2 {
+			if !utils.CompareTime(user.Start) && utils.CompareTime(user.End) && eventMap[user.RealName] < 2 {
 				users = append(users, &wzxy.User{
 					RealName: user.RealName,
 					Username: user.Username,
@@ -114,67 +113,6 @@ func doWork(users []*wzxy.User) {
 	_ = logFile.Close()
 }
 
-// CompareTime @Title CompareTime
-// @Description 比较输入时间和当前时间的大小
-// @Param inputTime string 输入时间
-// @Success bool
-func CompareTime(inputTime string) bool {
-	//构造包含当前日期的字符串
-	dateStr := time.Now().Format("2006-01-02") //使用Go语言规定的"2006-01-02"作为日期格式
-
-	//将输入时间和日期信息组合成一个完整的时间字符串
-	fullTimeStr := fmt.Sprintf("%s %s", dateStr, inputTime)
-
-	//解析时间字符串为time类型，获取输入时间
-	layout := "2006-01-02 15:04"
-	t, err := time.ParseInLocation(layout, fullTimeStr, time.Local)
-	if err != nil {
-		fmt.Println(err)
-		return false
-	}
-	//获取当前时间
-	currentTime := time.Now()
-	//比较当前时间和输入时间的差值
-	if t.After(currentTime) {
-		//fmt.Printf("%s is after current time %s", inputTime, currentTime.Format(layout))
-		return true
-	} else if t.Equal(currentTime) {
-		//fmt.Printf("%s is equal to current time %s", inputTime, currentTime.Format(layout))
-		return false
-	} else {
-		//fmt.Printf("%s is before current time %s", inputTime, currentTime.Format(layout))
-		return false
-	}
-}
-
-// @Title startLogServer
-// @Description 启动日志服务器
-func startLogServer() {
-	if _, err := os.Stat("logs"); os.IsNotExist(err) {
-		err = os.Mkdir("logs", 0755)
-		if err != nil {
-			log.Fatal(err)
-		}
-	}
-	go func() {
-		http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-			http.FileServer(http.Dir("logs")).ServeHTTP(w, r)
-		})
-
-		port := os.Getenv("PORT")
-		if port == "" {
-			port = "8080"
-		}
-
-		host := os.Getenv("wzxy_HOST")
-		if host == "" {
-			host = "0.0.0.0"
-		}
-
-		fmt.Printf("Server listening on http://%s:%s\n", host, port)
-		http.ListenAndServe(host+":"+port, nil)
-	}()
-}
 func setTime() {
 	var cstZone = time.FixedZone("CST", 8*3600) // 东八
 	time.Local = cstZone
