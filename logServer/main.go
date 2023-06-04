@@ -62,7 +62,7 @@ func StartLogServer() {
 				return
 			}
 			fmt.Fprintf(w, "<html><head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"><title>%s</title></head><body><h3>%s</h3>", logFile, logFile)
-			fmt.Fprintf(w, "<textarea style=\"width: 100%%;\">%s</textarea>", contents)
+			fmt.Fprintf(w, "<textarea rows='10' style=\"width: 100%%;\">%s</textarea>", contents)
 			fmt.Fprintf(w, "</body></html>")
 		})
 
