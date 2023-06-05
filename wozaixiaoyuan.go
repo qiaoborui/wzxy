@@ -17,7 +17,6 @@ func main() {
 	setTime()
 	log.SetFlags(log.Ltime | log.Ldate)
 	logServer.StartLogServer()
-	dateNow := time.Now().Format("20060102")
 	dateTmp := ""
 	timeTmp := time.Now()
 	storage, err := utils.FetchData("{\"status\": 1 }")
@@ -27,9 +26,11 @@ func main() {
 		return
 	}
 	for {
+		dateNow := time.Now().Format("20060102")
 		timeNow := time.Now()
 		// 每 30 分钟更新一次数据
 		if timeNow.Sub(timeTmp).Minutes() >= 30 {
+			log.Printf("更新用户数据")
 			timeTmp = timeNow
 			storage, err = utils.FetchData("{\"status\": 1 }")
 			if err != nil {
@@ -39,6 +40,7 @@ func main() {
 		}
 		// 每天重置一次打卡次数
 		if dateNow != dateTmp {
+			log.Printf("重置打卡次数")
 			dateTmp = dateNow
 			for _, user := range storage.Results {
 				eventMap[user.RealName] = 0
