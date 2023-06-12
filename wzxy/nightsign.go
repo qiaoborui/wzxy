@@ -150,6 +150,9 @@ func (s Session) Sign() error {
 		return nil
 	}
 	for _, v := range tasks.SignList {
+		if len(v.AreaList) == 0 {
+			continue
+		}
 		jsonRequestBody := SignData{
 			InArea:     1,
 			Longitude:  toFloat(v.AreaList[0].Longitude),
