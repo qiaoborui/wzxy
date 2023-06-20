@@ -32,10 +32,11 @@ func main() {
 		if timeNow.Sub(timeTmp).Minutes() >= 30 {
 			log.Printf("更新用户数据")
 			timeTmp = timeNow
-			storage, err = utils.FetchData("{\"status\": 1 }")
+			dataTmp, err := utils.FetchData("{\"status\": 1 }")
 			if err != nil {
 				fmt.Println(err)
-				return
+			}else {
+				storage = dataTmp
 			}
 		}
 		// 每天重置一次打卡次数
