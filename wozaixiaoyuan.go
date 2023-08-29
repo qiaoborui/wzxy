@@ -2,14 +2,15 @@ package main
 
 import (
 	"fmt"
+	"github.com/robfig/cron"
 	"io"
 	"log"
 	"os"
 	"sync"
 	"time"
-	"wobuzaixiaoyuan/logServer"
-	"wobuzaixiaoyuan/utils"
-	"wobuzaixiaoyuan/wzxy"
+	"wobuzaixiaoyuan/pkg/logServer"
+	utils2 "wobuzaixiaoyuan/pkg/utils"
+	"wobuzaixiaoyuan/pkg/wzxy"
 )
 
 // TEST GITHUB ACTION
@@ -17,42 +18,31 @@ func main() {
 	setTime()
 	log.SetFlags(log.Ltime | log.Ldate)
 	logServer.StartLogServer()
-	dateTmp := ""
-	timeTmp := time.Now()
-	storage, err := utils.FetchData("{\"status\": 1 }")
+	storage, err := utils2.FetchData("{\"status\": 1 }")
 	eventMap := make(map[string]int)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-	for {
-		dateNow := time.Now().Format("20060102")
-		timeNow := time.Now()
-		// 每 30 分钟更新一次数据
-		if timeNow.Sub(timeTmp).Minutes() >= 30 {
-			log.Printf("更新用户数据")
-			timeTmp = timeNow
-			dataTmp, err := utils.FetchData("{\"status\": 1 }")
-			if err != nil {
-				fmt.Println(err)
-			}else {
-				storage = dataTmp
-			}
+	c := cron.New()
+	updateSpec := "0 30 * * * *"
+	checkinSpec := "0 */5 * * * *"
+	resetSpec := "0 0 0 * * *"
+	c.AddFunc(updateSpec, func() {
+		log.Printf("更新用户数据")
+		dataTmp, err := utils2.FetchData("{\"status\": 1 }")
+		if err != nil {
+			fmt.Println(err)
+		} else {
+			storage = dataTmp
 		}
-		// 每天重置一次打卡次数
-		if dateNow != dateTmp {
-			log.Printf("重置打卡次数")
-			dateTmp = dateNow
-			for _, user := range storage.Results {
-				eventMap[user.RealName] = 0
-			}
-		}
-
+	})
+	c.AddFunc(checkinSpec, func() {
 		var users []*wzxy.User
 		results := make(chan string, 10)
 		for _, user := range storage.Results {
 			// 如果当前时间在用户设置的时间范围内，并且用户今天还没有打过卡
-			if !utils.CompareTime(user.Start) && utils.CompareTime(user.End) && eventMap[user.RealName] < 2 {
+			if !utils2.CompareTime(user.Start) && utils2.CompareTime(user.End) && eventMap[user.RealName] < 2 {
 				users = append(users, &wzxy.User{
 					RealName: user.RealName,
 					Username: user.Username,
@@ -69,8 +59,15 @@ func main() {
 		if len(users) != 0 {
 			doWork(users)
 		}
-		time.Sleep(5 * time.Minute)
-	}
+	})
+	c.AddFunc(resetSpec, func() {
+		log.Printf("重置打卡次数")
+		for _, user := range storage.Results {
+			eventMap[user.RealName] = 0
+		}
+	})
+	c.Start()
+	select {}
 }
 func doWork(users []*wzxy.User) {
 	timeNow := time.Now()
