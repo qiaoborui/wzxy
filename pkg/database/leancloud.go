@@ -1,13 +1,18 @@
-package utils
+package database
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
+	"github.com/leancloud/go-sdk/leancloud"
 	"io"
 	"net/http"
 	"net/url"
 	"sort"
-	"strings"
+	"wobuzaixiaoyuan/pkg/common"
 )
+
+var Client *leancloud.Client
 
 type Response struct {
 	Results []User `json:"results"`
@@ -15,14 +20,14 @@ type Response struct {
 
 func FetchData(condition string) (Response, error) {
 	client := &http.Client{}
-	Url, _ := url.Parse(APPURL)
+	Url, _ := url.Parse(common.APPURL)
 	params := url.Values{}
 	params.Set("where", condition)
 	Url.RawQuery = params.Encode()
 	urlPath := Url.String()
 	req, _ := http.NewRequest("GET", urlPath, nil)
-	req.Header.Add("X-LC-Id", APPID)
-	req.Header.Add("X-LC-Key", APPKEY)
+	req.Header.Add("X-LC-Id", common.APPID)
+	req.Header.Add("X-LC-Key", common.APPKEY)
 	req.Header.Add("Content-Type", "application/json")
 	resp, err := client.Do(req)
 	if err != nil {
@@ -44,17 +49,20 @@ func FetchData(condition string) (Response, error) {
 	return response, nil
 }
 
-func DisableUsers(id string) bool {
-	client := &http.Client{}
-	req, _ := http.NewRequest("PUT", APPURL+id, strings.NewReader("{\"status\":0}"))
-	req.Header.Add("X-LC-Id", APPID)
-	req.Header.Add("X-LC-Key", APPKEY)
-	req.Header.Add("Content-Type", "application/json")
-	resp, err := client.Do(req)
-	defer resp.Body.Close()
-	_, _ = io.ReadAll(resp.Body)
-	if err == nil {
-		return true
+func GetUsers() ([]User, error) {
+	user := User{}
+	err := Client.Class("InSchool").NewQuery().EqualTo("status", 1).First(&user)
+	if err != nil {
+		fmt.Println(err)
+		return nil, errors.New("获取用户数据失败")
 	}
-	return false
+	return []User{}, nil
+}
+
+func Initial() {
+	Client = leancloud.NewClient(&leancloud.ClientOptions{
+		AppID:     common.APPID,
+		AppKey:    common.APPKEY,
+		ServerURL: common.APPURL,
+	})
 }

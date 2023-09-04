@@ -8,8 +8,9 @@ import (
 	"os"
 	"sync"
 	"time"
+	"wobuzaixiaoyuan/pkg/common"
+	"wobuzaixiaoyuan/pkg/database"
 	"wobuzaixiaoyuan/pkg/logServer"
-	utils2 "wobuzaixiaoyuan/pkg/utils"
 	"wobuzaixiaoyuan/pkg/wzxy"
 )
 
@@ -18,32 +19,34 @@ func main() {
 	setTime()
 	log.SetFlags(log.Ltime | log.Ldate)
 	logServer.StartLogServer()
-	storage, err := utils2.FetchData("{\"status\": 1 }")
+	database.Initial()
+	users, err := database.GetUsers()
 	eventMap := make(map[string]int)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
+
 	c := cron.New()
 	updateSpec := "0 30 * * * *"
 	checkinSpec := "0 */5 * * * *"
 	resetSpec := "0 0 0 * * *"
 	c.AddFunc(updateSpec, func() {
 		log.Printf("更新用户数据")
-		dataTmp, err := utils2.FetchData("{\"status\": 1 }")
+		dataTmp, err := database.GetUsers()
 		if err != nil {
 			fmt.Println(err)
 		} else {
-			storage = dataTmp
+			users = dataTmp
 		}
 	})
 	c.AddFunc(checkinSpec, func() {
-		var users []*wzxy.User
+		var checkinUsers []*wzxy.User
 		results := make(chan string, 10)
-		for _, user := range storage.Results {
+		for _, user := range users {
 			// 如果当前时间在用户设置的时间范围内，并且用户今天还没有打过卡
-			if !utils2.CompareTime(user.Start) && utils2.CompareTime(user.End) && eventMap[user.RealName] < 2 {
-				users = append(users, &wzxy.User{
+			if !common.CompareTime(user.Start) && common.CompareTime(user.End) && eventMap[user.RealName] < 2 {
+				checkinUsers = append(checkinUsers, &wzxy.User{
 					RealName: user.RealName,
 					Username: user.Username,
 					Password: user.Password,
@@ -52,17 +55,17 @@ func main() {
 				eventMap[user.RealName]++
 			}
 		}
-		if len(users) == 0 {
+		if len(checkinUsers) == 0 {
 			log.SetOutput(os.Stdout)
 			log.Printf("没有需要打卡的用户")
 		}
-		if len(users) != 0 {
-			doWork(users)
+		if len(checkinUsers) != 0 {
+			doWork(checkinUsers)
 		}
 	})
 	c.AddFunc(resetSpec, func() {
 		log.Printf("重置打卡次数")
-		for _, user := range storage.Results {
+		for _, user := range users {
 			eventMap[user.RealName] = 0
 		}
 	})

@@ -1,8 +1,11 @@
-package utils
+package database
+
+import "github.com/leancloud/go-sdk/leancloud"
 
 type User struct {
+	leancloud.Object
 	Username  string `json:"username"`
-	RealName  string `json:"zh_name"`
+	RealName  string `json:"Zh_name"`
 	Password  string `json:"passwd"`
 	IsEnable  int    `json:"status"`
 	Jwsession string `json:"cache"`
