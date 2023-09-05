@@ -8,6 +8,7 @@ import (
 	"os"
 	"time"
 	"wobuzaixiaoyuan/pkg/database"
+	"wobuzaixiaoyuan/pkg/webTemplate"
 )
 
 type ATag struct {
@@ -38,7 +39,7 @@ func StartLogServer() {
 				return
 			}
 			numLogs := len(logs)
-			tmpl, err := template.ParseFiles("pkg/template/index.tmpl")
+			tmpl, err := template.New("index").Parse(webTemplate.GetIndexTemplate())
 			if err != nil {
 				http.Error(w, "解析模板失败", http.StatusInternalServerError)
 				return
@@ -70,7 +71,7 @@ func StartLogServer() {
 			}
 			createTime := logContent.CreatedAt.In(shanghaiLoc).Format("2006-01-02 15:04:05")
 			logContentText := logContent.Content
-			tmpl, err := template.ParseFiles("pkg/template/log.tmpl")
+			tmpl, err := template.New("log").Parse(webTemplate.GetLogTmpl())
 			if err != nil {
 				http.Error(w, "解析模板失败", http.StatusInternalServerError)
 				return

@@ -1,4 +1,7 @@
-<html>
+package webTemplate
+
+func GetLogTmpl() string {
+	return `<html>
     <head>
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>{{.Time}}</title>
@@ -34,4 +37,5 @@
         <h3>{{.Time}}</h3>
         <textarea rows='10' style="width: 100%;">{{.Content}}</textarea>
     </body>
-</html>
+</html>`
+}

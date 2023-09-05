@@ -1,4 +1,7 @@
-<!DOCTYPE html>
+package webTemplate
+
+func GetIndexTemplate() string {
+	return `<!DOCTYPE html>
 <html>
     <head>
         <title>日志查看</title>
@@ -34,4 +37,5 @@
               </div>
         {{end}}
     </body>
-</html>
+</html>`
+}
