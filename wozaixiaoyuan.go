@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/robfig/cron"
 	"io"
@@ -8,17 +9,18 @@ import (
 	"os"
 	"sync"
 	"time"
+	"wobuzaixiaoyuan/pkg/common"
+	"wobuzaixiaoyuan/pkg/database"
 	"wobuzaixiaoyuan/pkg/logServer"
-	utils2 "wobuzaixiaoyuan/pkg/utils"
 	"wobuzaixiaoyuan/pkg/wzxy"
 )
 
 // TEST GITHUB ACTION
 func main() {
-	setTime()
+	//setTime()
 	log.SetFlags(log.Ltime | log.Ldate)
 	logServer.StartLogServer()
-	storage, err := utils2.FetchData("{\"status\": 1 }")
+	users, err := database.GetUsers()
 	eventMap := make(map[string]int)
 	if err != nil {
 		fmt.Println(err)
@@ -26,24 +28,24 @@ func main() {
 	}
 	c := cron.New()
 	updateSpec := "0 30 * * * *"
-	checkinSpec := "0 */5 * * * *"
+	checkinSpec := "0 * * * * *"
 	resetSpec := "0 0 0 * * *"
 	c.AddFunc(updateSpec, func() {
 		log.Printf("更新用户数据")
-		dataTmp, err := utils2.FetchData("{\"status\": 1 }")
+		dataTmp, err := database.GetUsers()
 		if err != nil {
 			fmt.Println(err)
 		} else {
-			storage = dataTmp
+			users = dataTmp
 		}
 	})
 	c.AddFunc(checkinSpec, func() {
-		var users []*wzxy.User
+		var checkinUsers []*wzxy.User
 		results := make(chan string, 10)
-		for _, user := range storage.Results {
+		for _, user := range users {
 			// 如果当前时间在用户设置的时间范围内，并且用户今天还没有打过卡
-			if !utils2.CompareTime(user.Start) && utils2.CompareTime(user.End) && eventMap[user.RealName] < 2 {
-				users = append(users, &wzxy.User{
+			if !common.CompareTime(user.Start) && common.CompareTime(user.End) && eventMap[user.RealName] < 2 {
+				checkinUsers = append(checkinUsers, &wzxy.User{
 					RealName: user.RealName,
 					Username: user.Username,
 					Password: user.Password,
@@ -52,17 +54,17 @@ func main() {
 				eventMap[user.RealName]++
 			}
 		}
-		if len(users) == 0 {
+		if len(checkinUsers) == 0 {
 			log.SetOutput(os.Stdout)
 			log.Printf("没有需要打卡的用户")
 		}
-		if len(users) != 0 {
-			doWork(users)
+		if len(checkinUsers) != 0 {
+			doWork(checkinUsers)
 		}
 	})
 	c.AddFunc(resetSpec, func() {
 		log.Printf("重置打卡次数")
-		for _, user := range storage.Results {
+		for _, user := range users {
 			eventMap[user.RealName] = 0
 		}
 	})
@@ -70,14 +72,9 @@ func main() {
 	select {}
 }
 func doWork(users []*wzxy.User) {
-	timeNow := time.Now()
-	logFileName := fmt.Sprintf("logs/%d-%02d-%02d %02d.%02d.%02d.log", timeNow.Year(), timeNow.Month(), timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second())
-	logFile, err := os.OpenFile(logFileName, os.O_CREATE|os.O_RDWR|os.O_APPEND, 0777)
-	multiWriter := io.MultiWriter(os.Stdout, logFile)
+	var logFile bytes.Buffer
+	multiWriter := io.MultiWriter(os.Stdout, &logFile)
 	log.SetOutput(multiWriter)
-	if err != nil {
-		log.Fatal(err)
-	}
 	var wg sync.WaitGroup
 	start := time.Now()
 	maxConcurrent := 10
@@ -103,14 +100,15 @@ func doWork(users []*wzxy.User) {
 	wg.Wait()
 	close(sem)
 	close(successCh)
-
 	// 按顺序输出已签到的wzxy对象
 	for w := range successCh {
 		log.Printf("%s\n", <-w.User.Result)
 	}
 	elapsed := time.Since(start)
 	log.Printf("程序运行时间为：%s \n", elapsed)
-	_ = logFile.Close()
+	data := logFile.String()
+	database.UploadLog(data)
+	logFile.Reset()
 }
 
 func setTime() {
