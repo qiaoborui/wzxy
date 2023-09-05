@@ -7,17 +7,17 @@ func GetIndexTemplate() string {
         <title>日志查看</title>
         <style>
              body {
-                    font-size: 18px;
+                    font-size: 25px;
                     text-align: center;
                 }
                 h1 {
-                    font-size: 32px;
+                    font-size: 40px;
                     margin-top: 20px;
                     margin-bottom: 20px;
                 }
                 .col-12 {
                     margin: 10px auto;
-                    padding: 10px;
+                    padding: 30px;
                     border: 1px solid black;
                     border-radius: 5px;
                     text-align: center;

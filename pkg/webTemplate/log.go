@@ -7,18 +7,18 @@ func GetLogTmpl() string {
         <title>{{.Time}}</title>
         <style>
         body {
-                font-size: 18px;
+                font-size: 30px;
                 text-align: center;
                 margin: 0;
                 padding: 0;
             }
             h3 {
-                font-size: 24px;
+                font-size: 40px;
                 margin-top: 20px;
                 margin-bottom: 20px;
             }
             textarea {
-                margin: 10px auto;
+                margin: 20px auto;
                 padding: 10px;
                 border: 1px solid black;
                 border-radius: 5px;
@@ -35,7 +35,7 @@ func GetLogTmpl() string {
     </head>
     <body>
         <h3>{{.Time}}</h3>
-        <textarea rows='10' style="width: 100%;">{{.Content}}</textarea>
+        <textarea rows='10' style="width: 95%;">{{.Content}}</textarea>
     </body>
 </html>`
 }
