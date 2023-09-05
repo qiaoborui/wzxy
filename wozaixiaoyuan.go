@@ -28,7 +28,7 @@ func main() {
 	}
 	c := cron.New()
 	updateSpec := "0 30 * * * *"
-	checkinSpec := "0 * * * * *"
+	checkinSpec := "0 */5 * * * *"
 	resetSpec := "0 0 0 * * *"
 	c.AddFunc(updateSpec, func() {
 		log.Printf("更新用户数据")
