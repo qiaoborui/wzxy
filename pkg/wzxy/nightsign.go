@@ -160,20 +160,13 @@ func (s Session) Sign() error {
 			return errors.Wrap(err, "error sending request")
 		}
 		defer resp.Body.Close()
-		var data map[string]interface{}
+		var data Response
 		err = json.NewDecoder(resp.Body).Decode(&data)
-		code, ok := data["code"].(int)
-		if !ok {
-			return fmt.Errorf("error parsing code")
-		}
-		msg, ok := data["message"].(string)
-		if !ok {
-			return fmt.Errorf("error parsing message")
-		}
-		if code == 0 {
+
+		if data.Code == 0 {
 			s.User.Result <- fmt.Sprintf("[%s]签到成功", s.User.RealName)
 		} else {
-			s.User.Result <- fmt.Sprintf("[%s]签到失败,响应：", s.User.RealName, msg)
+			s.User.Result <- fmt.Sprintf("[%s]签到失败,响应：", s.User.RealName, data.Message)
 		}
 	}
 

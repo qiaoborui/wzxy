@@ -23,6 +23,11 @@ type Session struct {
 	User   *User
 }
 
+type Response struct {
+	Code    int    `json:"code"`
+	Message string `json:"message"`
+}
+
 func NewSession(user *User) *Session {
 	jar, _ := cookiejar.New(nil)
 	return &Session{
@@ -54,16 +59,12 @@ func (s Session) Login() error {
 	if err != nil {
 		return errors.Wrap(err, "error reading response body")
 	}
-	var resp map[string]interface{}
+	var resp Response
 	err = json.Unmarshal(body, &resp)
 	if err != nil {
 		return errors.Wrap(err, "error unmarshalling response body")
 	}
-	code, ok := resp["code"].(int)
-	if !ok {
-		return fmt.Errorf("error parsing code")
-	}
-	if code != 0 {
+	if resp.Code != 0 {
 		return fmt.Errorf("login failed")
 	}
 	return nil

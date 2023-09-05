@@ -2,7 +2,6 @@ package wzxy
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 	"log"
 	"os"
@@ -30,7 +29,7 @@ func DoWork(users []*User) {
 			defer func() { <-sem }()
 			defer wg.Done()
 			if err := w.Login(); err != nil {
-				fmt.Printf("[%s] login failed: %v\n", w.User.RealName, err)
+				log.Printf("[%s] login failed: %v\n", w.User.RealName, err)
 				return
 			}
 			_ = w.Sign()
