@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/robfig/cron"
 	"io"
@@ -16,20 +17,18 @@ import (
 
 // TEST GITHUB ACTION
 func main() {
-	setTime()
+	//setTime()
 	log.SetFlags(log.Ltime | log.Ldate)
 	logServer.StartLogServer()
-	database.Initial()
 	users, err := database.GetUsers()
 	eventMap := make(map[string]int)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-
 	c := cron.New()
 	updateSpec := "0 30 * * * *"
-	checkinSpec := "0 */5 * * * *"
+	checkinSpec := "0 * * * * *"
 	resetSpec := "0 0 0 * * *"
 	c.AddFunc(updateSpec, func() {
 		log.Printf("更新用户数据")
@@ -73,14 +72,9 @@ func main() {
 	select {}
 }
 func doWork(users []*wzxy.User) {
-	timeNow := time.Now()
-	logFileName := fmt.Sprintf("logs/%d-%02d-%02d %02d.%02d.%02d.log", timeNow.Year(), timeNow.Month(), timeNow.Day(), timeNow.Hour(), timeNow.Minute(), timeNow.Second())
-	logFile, err := os.OpenFile(logFileName, os.O_CREATE|os.O_RDWR|os.O_APPEND, 0777)
-	multiWriter := io.MultiWriter(os.Stdout, logFile)
+	var logFile bytes.Buffer
+	multiWriter := io.MultiWriter(os.Stdout, &logFile)
 	log.SetOutput(multiWriter)
-	if err != nil {
-		log.Fatal(err)
-	}
 	var wg sync.WaitGroup
 	start := time.Now()
 	maxConcurrent := 10
@@ -106,14 +100,15 @@ func doWork(users []*wzxy.User) {
 	wg.Wait()
 	close(sem)
 	close(successCh)
-
 	// 按顺序输出已签到的wzxy对象
 	for w := range successCh {
 		log.Printf("%s\n", <-w.User.Result)
 	}
 	elapsed := time.Since(start)
 	log.Printf("程序运行时间为：%s \n", elapsed)
-	_ = logFile.Close()
+	data := logFile.String()
+	database.UploadLog(data)
+	logFile.Reset()
 }
 
 func setTime() {

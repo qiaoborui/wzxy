@@ -2,9 +2,9 @@ package database
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"github.com/leancloud/go-sdk/leancloud"
+	"github.com/pkg/errors"
 	"io"
 	"net/http"
 	"net/url"
@@ -50,19 +50,46 @@ func FetchData(condition string) (Response, error) {
 }
 
 func GetUsers() ([]User, error) {
-	user := User{}
-	err := Client.Class("InSchool").NewQuery().EqualTo("status", 1).First(&user)
+	var users []User
+	err := Client.Class("InSchool").NewQuery().Find(&users)
 	if err != nil {
 		fmt.Println(err)
-		return nil, errors.New("获取用户数据失败")
+		return nil, errors.Wrap(err, "获取用户数据失败")
 	}
-	return []User{}, nil
+	return users, nil
 }
 
-func Initial() {
+func UploadLog(content string) error {
+	log := Log{
+		Content: content,
+	}
+	_, err := Client.Class("logs").Create(&log)
+	return err
+}
+
+func GetLogs() ([]Log, error) {
+	var res []Log
+	err := Client.Class("logs").NewQuery().Find(&res)
+	if err != nil {
+		return nil, errors.Wrap(err, "获取日志数据失败")
+	}
+	return res, nil
+}
+
+func GetSpecficLog(id string) (Log, error) {
+	var res Log
+	err := Client.Class("logs").NewQuery().EqualTo("objectId", id).First(&res)
+	if err != nil {
+		return Log{}, errors.Wrap(err, "获取日志数据失败")
+	}
+	return res, nil
+}
+
+func init() {
 	Client = leancloud.NewClient(&leancloud.ClientOptions{
-		AppID:     common.APPID,
-		AppKey:    common.APPKEY,
-		ServerURL: common.APPURL,
+		AppID:      common.APPID,
+		AppKey:     common.APPKEY,
+		ServerURL:  common.APPURL,
+		Production: "0",
 	})
 }

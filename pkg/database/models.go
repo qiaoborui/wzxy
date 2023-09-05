@@ -12,3 +12,8 @@ type User struct {
 	Start     string `json:"start"`
 	End       string `json:"end"`
 }
+
+type Log struct {
+	leancloud.Object
+	Content string `json:"content"`
+}
