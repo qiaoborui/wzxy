@@ -7,6 +7,7 @@ import (
 )
 
 func init() {
+	setTime()
 	// 设置配置文件名为 config
 	viper.SetConfigName("config")
 	// 设置配置文件格式为 JSON
