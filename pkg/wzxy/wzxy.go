@@ -3,6 +3,7 @@ package wzxy
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/pkg/errors"
 	"io"
 	"net/http"
 	"net/http/cookiejar"
@@ -22,14 +23,7 @@ type Session struct {
 	User   *User
 }
 
-//var mu sync.Mutex
-
-type loginResp struct {
-	Code int
-}
-
-// NewWzxy返回一个用于打卡的客户端实例
-func NewWzxy(user *User) *Session {
+func NewSession(user *User) *Session {
 	jar, _ := cookiejar.New(nil)
 	return &Session{
 		client: &http.Client{Jar: jar},
@@ -38,21 +32,39 @@ func NewWzxy(user *User) *Session {
 }
 
 func (s Session) Login() error {
-	Url, _ := url.Parse("https://gw.wozaixiaoyuan.com/basicinfo/mobile/login/username")
+	Url, err := url.Parse("https://gw.wozaixiaoyuan.com/basicinfo/mobile/login/username")
+	if err != nil {
+		return errors.Wrap(err, "error parsing URL")
+	}
 	params := url.Values{}
 	params.Set("username", s.User.Username)
 	params.Set("password", s.User.Password)
 	Url.RawQuery = params.Encode()
 	urlPath := Url.String()
-	req, _ := http.NewRequest("POST", urlPath, strings.NewReader("{}"))
-	//addHeaders(req)
-	respRaw, _ := s.client.Do(req)
+	req, err := http.NewRequest("POST", urlPath, strings.NewReader("{}"))
+	if err != nil {
+		return errors.Wrap(err, "error creating new request")
+	}
+	respRaw, err := s.client.Do(req)
+	if err != nil {
+		return errors.Wrap(err, "error sending request")
+	}
 	defer respRaw.Body.Close()
-	body, _ := io.ReadAll(respRaw.Body)
-	var resp loginResp
-	json.Unmarshal(body, &resp)
-	if resp.Code != 0 {
-		return fmt.Errorf("登录失败")
+	body, err := io.ReadAll(respRaw.Body)
+	if err != nil {
+		return errors.Wrap(err, "error reading response body")
+	}
+	var resp map[string]interface{}
+	err = json.Unmarshal(body, &resp)
+	if err != nil {
+		return errors.Wrap(err, "error unmarshalling response body")
+	}
+	code, ok := resp["code"].(int)
+	if !ok {
+		return fmt.Errorf("error parsing code")
+	}
+	if code != 0 {
+		return fmt.Errorf("login failed")
 	}
 	return nil
 }

@@ -2,6 +2,7 @@ package common
 
 import (
 	"fmt"
+	"strconv"
 	"time"
 )
 
@@ -40,4 +41,12 @@ func CompareTime(inputTime string) bool {
 func setTime() {
 	var cstZone = time.FixedZone("CST", 8*3600) // 东八
 	time.Local = cstZone
+}
+
+func ToFloat(s string) (float64, error) {
+	result, err := strconv.ParseFloat(s, 64)
+	if err != nil {
+		return 0, err
+	}
+	return result, nil
 }

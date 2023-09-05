@@ -23,7 +23,7 @@ func DoWork(users []*User) {
 	// 用来接收已签到的wzxy对象
 	successCh := make(chan *Session, len(users))
 	for _, user := range users {
-		w := NewWzxy(user)
+		w := NewSession(user)
 		sem <- struct{}{}
 		wg.Add(1)
 		go func(w *Session) {

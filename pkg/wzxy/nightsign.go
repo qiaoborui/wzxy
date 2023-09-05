@@ -4,9 +4,10 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/pkg/errors"
 	"net/http"
 	"net/url"
-	"strconv"
+	"wobuzaixiaoyuan/pkg/common"
 )
 
 type Area struct {
@@ -46,74 +47,44 @@ type SignData struct {
 type ListResponse struct {
 	Code int `json:"code"`
 	Data []struct {
-		Area           string `json:"area,omitempty"`
-		AreaID         string `json:"areaId,omitempty"`
-		City           string `json:"city,omitempty"`
-		Classes        string `json:"classes"`
-		ClassesID      string `json:"classesId"`
-		College        string `json:"college"`
-		AreaList       []Area `json:"areaList"`
-		Country        string `json:"country,omitempty"`
-		CreateCollege  string `json:"createCollege"`
-		CreateHead     string `json:"createHead"`
-		CreateName     string `json:"createName"`
-		Date           int64  `json:"date,omitempty"`
-		Degree         string `json:"degree"`
-		District       string `json:"district,omitempty"`
-		End            int64  `json:"end"`
-		Head           string `json:"head"`
-		ID             string `json:"id"`
-		IsRead         int    `json:"isRead"`
-		Latitude       string `json:"latitude,omitempty"`
-		LeaderSign     int    `json:"leaderSign"`
-		Longitude      string `json:"longitude,omitempty"`
-		Major          string `json:"major"`
-		Mode           int    `json:"mode"`
-		Name           string `json:"name"`
-		Number         string `json:"number"`
-		Phone          string `json:"phone"`
-		Province       string `json:"province,omitempty"`
-		QrCode         int    `json:"qrCode"`
-		ReadDate       int64  `json:"readDate"`
-		SchoolID       string `json:"schoolId"`
-		SignContext    string `json:"signContext"`
-		SignDay        string `json:"signDay,omitempty"`
-		SignID         string `json:"signId"`
-		SignMode       int    `json:"signMode"`
-		SignStatus     int    `json:"signStatus"`
-		SignTitle      string `json:"signTitle"`
-		SignUserID     string `json:"signUserId,omitempty"`
-		SignUserName   string `json:"signUserName,omitempty"`
-		SignUserNumber string `json:"signUserNumber,omitempty"`
-		SignUserType   string `json:"signUserType,omitempty"`
-		Start          int64  `json:"start"`
-		Street         string `json:"street,omitempty"`
-		TargetID       string `json:"targetId"`
-		TargetName     string `json:"targetName"`
-		TargetType     int    `json:"targetType"`
-		Teacher        string `json:"teacher"`
-		TeacherID      string `json:"teacherId"`
-		Township       string `json:"township,omitempty"`
-		Type           int    `json:"type"`
-		UserArea       string `json:"userArea"`
-		UserID         string `json:"userId"`
-		UserType       string `json:"userType"`
-		Year           string `json:"year"`
+		Area       string `json:"area,omitempty"`
+		AreaID     string `json:"areaId,omitempty"`
+		City       string `json:"city,omitempty"`
+		AreaList   []Area `json:"areaList"`
+		Country    string `json:"country,omitempty"`
+		Date       int64  `json:"date,omitempty"`
+		District   string `json:"district,omitempty"`
+		ID         string `json:"id"`
+		Latitude   string `json:"latitude,omitempty"`
+		Longitude  string `json:"longitude,omitempty"`
+		Name       string `json:"name"`
+		Province   string `json:"province,omitempty"`
+		SchoolID   string `json:"schoolId"`
+		SignID     string `json:"signId"`
+		SignStatus int    `json:"signStatus"`
+		Start      int64  `json:"start"`
+		Street     string `json:"street,omitempty"`
+		Township   string `json:"township,omitempty"`
+		Type       int    `json:"type"`
+		UserID     string `json:"userId"`
 	} `json:"data"`
+}
+
+type SignResponse struct {
+	Message string `json:"message"`
+	Code    int    `json:"code"`
 }
 
 func (s Session) GetSignList() (SignList, error) {
 	resp, err := s.client.Get("https://gw.wozaixiaoyuan.com/sign/mobile/receive/getMySignLogs?page=1&size=10")
 	if err != nil {
-		fmt.Println(err)
-		return SignList{}, err
+		return SignList{}, errors.Wrap(err, "发起请求失败")
 	}
 	defer resp.Body.Close()
 	var data ListResponse
 	err = json.NewDecoder(resp.Body).Decode(&data)
 	if err != nil {
-		fmt.Println(err)
-		return SignList{}, err
+		return SignList{}, errors.Wrap(err, "解析响应失败")
 	}
 	result := SignList{}
 	for _, v := range data.Data {
@@ -129,21 +100,11 @@ func (s Session) GetSignList() (SignList, error) {
 	return result, nil
 }
 
-type SignResponse struct {
-	Message string `json:"message"`
-	Code    int    `json:"code"`
-}
-
-func toFloat(s string) float64 {
-	result, _ := strconv.ParseFloat(s, 64)
-	return result
-}
-
 func (s Session) Sign() error {
 	tasks, err := s.GetSignList()
 	if err != nil {
-		s.User.Result <- string(err.Error())
-		return err
+		s.User.Result <- err.Error()
+		return errors.Wrap(err, "获取签到任务失败")
 	}
 	if len(tasks.SignList) == 0 {
 		s.User.Result <- fmt.Sprintf("[%s]没有签到任务", s.User.RealName)
@@ -153,10 +114,18 @@ func (s Session) Sign() error {
 		if len(v.AreaList) == 0 {
 			continue
 		}
+		lng, err := common.ToFloat(v.AreaList[0].Longitude)
+		if err != nil {
+			return errors.Wrap(err, "经度转换失败")
+		}
+		lat, err := common.ToFloat(v.AreaList[0].Latitude)
+		if err != nil {
+			return errors.Wrap(err, "纬度转换失败")
+		}
 		jsonRequestBody := SignData{
 			InArea:     1,
-			Longitude:  toFloat(v.AreaList[0].Longitude),
-			Latitude:   toFloat(v.AreaList[0].Latitude),
+			Longitude:  lng,
+			Latitude:   lat,
 			Province:   "陕西省",
 			City:       "西安市",
 			AreaJson:   AreaListToAreaJson(v.AreaList),
@@ -183,27 +152,34 @@ func (s Session) Sign() error {
 		u.RawQuery = query.Encode()
 		req, err := http.NewRequest("POST", u.String(), bytes.NewBuffer([]byte(requestData)))
 		if err != nil {
-
+			return errors.Wrap(err, "error creating new request")
 		}
 		req.Header.Set("Content-Type", "application/json")
 		resp, err := s.client.Do(req)
 		if err != nil {
-			fmt.Println(err)
-			return err
+			return errors.Wrap(err, "error sending request")
 		}
-		//resp.Body.Close()
-		var data SignResponse
+		defer resp.Body.Close()
+		var data map[string]interface{}
 		err = json.NewDecoder(resp.Body).Decode(&data)
-		if data.Code == 0 {
+		code, ok := data["code"].(int)
+		if !ok {
+			return fmt.Errorf("error parsing code")
+		}
+		msg, ok := data["message"].(string)
+		if !ok {
+			return fmt.Errorf("error parsing message")
+		}
+		if code == 0 {
 			s.User.Result <- fmt.Sprintf("[%s]签到成功", s.User.RealName)
 		} else {
-			s.User.Result <- fmt.Sprintf("[%s]签到失败", s.User.RealName)
+			s.User.Result <- fmt.Sprintf("[%s]签到失败,响应：", s.User.RealName, msg)
 		}
 	}
-	//mu.Unlock()
 
 	return nil
 }
+
 func AreaListToAreaJson(areaList []Area) string {
 	for _, v := range areaList {
 		if v.ID == "190002" {

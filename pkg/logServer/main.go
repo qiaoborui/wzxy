@@ -13,18 +13,15 @@ import (
 // @Description 启动日志服务器
 func StartLogServer() {
 	shanghaiLoc := time.FixedZone("UTC+8", 8*60*60)
-
 	go func() {
 		port := os.Getenv("PORT")
 		if port == "" {
 			port = "8080"
 		}
-
 		host := os.Getenv("HOST")
 		if host == "" {
 			host = "0.0.0.0"
 		}
-
 		serverAddress := fmt.Sprintf("%s:%s", host, port)
 		fmt.Printf("Server listening on http://%s\n", serverAddress)
 
