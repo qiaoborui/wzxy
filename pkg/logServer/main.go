@@ -34,13 +34,13 @@ func StartLogServer() {
 		http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 			logs, err := database.GetLogs()
 			if err != nil {
-				http.Error(w, "Failed to retrieve logs", http.StatusInternalServerError)
+				http.Error(w, "获取日志失败", http.StatusInternalServerError)
 				return
 			}
 			numLogs := len(logs)
 			tmpl, err := template.ParseFiles("pkg/template/index.tmpl")
 			if err != nil {
-				http.Error(w, "Failed to retrieve logs", http.StatusInternalServerError)
+				http.Error(w, "解析模板失败", http.StatusInternalServerError)
 				return
 			}
 			var aTags []ATag
@@ -56,7 +56,7 @@ func StartLogServer() {
 				"Logs": aTags,
 			})
 			if err != nil {
-				http.Error(w, fmt.Sprintf("err: %v", err), http.StatusInternalServerError)
+				http.Error(w, fmt.Sprintf("渲染模板失败 err: %v", err), http.StatusInternalServerError)
 				return
 			}
 		})
@@ -72,7 +72,7 @@ func StartLogServer() {
 			logContentText := logContent.Content
 			tmpl, err := template.ParseFiles("pkg/template/log.tmpl")
 			if err != nil {
-				http.Error(w, "Failed to retrieve logs", http.StatusInternalServerError)
+				http.Error(w, "解析模板失败", http.StatusInternalServerError)
 				return
 			}
 			err = tmpl.Execute(w, map[string]interface{}{
@@ -80,7 +80,7 @@ func StartLogServer() {
 				"Content": logContentText,
 			})
 			if err != nil {
-				http.Error(w, fmt.Sprintf("err: %v", err), http.StatusInternalServerError)
+				http.Error(w, fmt.Sprintf("渲染模板失败 err: %v", err), http.StatusInternalServerError)
 				return
 			}
 		})
