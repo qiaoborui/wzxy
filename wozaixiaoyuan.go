@@ -17,7 +17,7 @@ import (
 
 // TEST GITHUB ACTION
 func main() {
-	//setTime()
+	setTime()
 	log.SetFlags(log.Ltime | log.Ldate)
 	logServer.StartLogServer()
 	users, err := database.GetUsers()
