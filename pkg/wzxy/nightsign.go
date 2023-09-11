@@ -4,10 +4,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/pkg/errors"
 	"net/http"
 	"net/url"
 	"wobuzaixiaoyuan/pkg/common"
+
+	"github.com/pkg/errors"
 )
 
 type Area struct {
@@ -75,16 +76,24 @@ type SignResponse struct {
 	Code    int    `json:"code"`
 }
 
-func (s Session) GetSignList() (SignList, error) {
+func (s *Session) GetSignList() SignList {
+	if s.Err != nil {
+		// 如果s.Err不为空，也可以在这里进行处理，例如记录日志
+		return SignList{}
+	}
 	resp, err := s.client.Get("https://gw.wozaixiaoyuan.com/sign/mobile/receive/getMySignLogs?page=1&size=10")
 	if err != nil {
-		return SignList{}, errors.Wrap(err, "发起请求失败")
+		s.Err = errors.Wrap(err, "获取请求列表发起请求失败")
+		// 在这里可以记录错误日志，但不会返回错误
+		return SignList{}
 	}
 	defer resp.Body.Close()
 	var data ListResponse
 	err = json.NewDecoder(resp.Body).Decode(&data)
 	if err != nil {
-		return SignList{}, errors.Wrap(err, "解析响应失败")
+		s.Err = errors.Wrap(err, "获取请求列表解析响应失败")
+		// 在这里可以记录错误日志，但不会返回错误
+		return SignList{}
 	}
 	result := SignList{}
 	for _, v := range data.Data {
@@ -95,20 +104,17 @@ func (s Session) GetSignList() (SignList, error) {
 				AreaList []Area `json:"areaList"`
 			}{SignId: v.SignID, Id: v.ID, AreaList: v.AreaList})
 		}
-
 	}
-	return result, nil
+	return result
 }
 
-func (s Session) Sign() error {
-	tasks, err := s.GetSignList()
-	if err != nil {
-		s.User.Result <- err.Error()
-		return errors.Wrap(err, "获取签到任务失败")
+func (s *Session) Sign(tasks SignList) {
+	if s.Err != nil {
+		return
 	}
 	if len(tasks.SignList) == 0 {
 		s.User.Result <- fmt.Sprintf("[%s]没有签到任务", s.User.RealName)
-		return nil
+		return
 	}
 	for _, v := range tasks.SignList {
 		if len(v.AreaList) == 0 {
@@ -116,11 +122,13 @@ func (s Session) Sign() error {
 		}
 		lng, err := common.ToFloat(v.AreaList[0].Longitude)
 		if err != nil {
-			return errors.Wrap(err, "经度转换失败")
+			s.Err = errors.Wrap(err, "经度转换失败")
+			return
 		}
 		lat, err := common.ToFloat(v.AreaList[0].Latitude)
 		if err != nil {
-			return errors.Wrap(err, "纬度转换失败")
+			s.Err = errors.Wrap(err, "纬度转换失败")
+			return
 		}
 		jsonRequestBody := SignData{
 			InArea:     1,
@@ -152,25 +160,27 @@ func (s Session) Sign() error {
 		u.RawQuery = query.Encode()
 		req, err := http.NewRequest("POST", u.String(), bytes.NewBuffer([]byte(requestData)))
 		if err != nil {
-			return errors.Wrap(err, "error creating new request")
+			s.Err = errors.Wrap(err, "error creating new request")
+			return
 		}
 		req.Header.Set("Content-Type", "application/json")
 		resp, err := s.client.Do(req)
 		if err != nil {
-			return errors.Wrap(err, "error sending request")
+			s.Err = errors.Wrap(err, "error sending request")
+			return
 		}
 		defer resp.Body.Close()
 		var data Response
 		err = json.NewDecoder(resp.Body).Decode(&data)
-
+		if err != nil {
+			s.Err = errors.Wrap(err,"error unmarshalling response body")
+		}
 		if data.Code == 0 {
 			s.User.Result <- fmt.Sprintf("[%s]签到成功", s.User.RealName)
 		} else {
-			s.User.Result <- fmt.Sprintf("[%s]签到失败,响应：", s.User.RealName, data.Message)
+			s.Err =  fmt.Errorf(fmt.Sprintf("签到失败,响应：%s", data.Message))
 		}
 	}
-
-	return nil
 }
 
 func AreaListToAreaJson(areaList []Area) string {

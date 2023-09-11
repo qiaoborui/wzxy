@@ -21,6 +21,7 @@ func DoWork(users []*User) {
 	sem := make(chan struct{}, maxConcurrent)
 	// 用来接收已签到的wzxy对象
 	successCh := make(chan *Session, len(users))
+	failedCh := make(chan *Session, len(users))
 	for _, user := range users {
 		w := NewSession(user)
 		sem <- struct{}{}
@@ -28,20 +29,26 @@ func DoWork(users []*User) {
 		go func(w *Session) {
 			defer func() { <-sem }()
 			defer wg.Done()
-			if err := w.Login(); err != nil {
-				log.Printf("[%s] login failed: %v\n", w.User.RealName, err)
+			w.Login()
+			tasks := w.GetSignList()
+			w.Sign(tasks)
+			if w.Err != nil {
+				failedCh <- w
 				return
 			}
-			_ = w.Sign()
 			successCh <- w
 		}(w)
 	}
 	wg.Wait()
 	close(sem)
 	close(successCh)
+	close(failedCh)
 	// 按顺序输出已签到的wzxy对象
 	for w := range successCh {
 		log.Printf("%s\n", <-w.User.Result)
+	}
+	for w := range failedCh {
+		log.Printf("[%s] occur errors: %v",w.User.RealName,w.Err)
 	}
 	elapsed := time.Since(start)
 	log.Printf("程序运行时间为：%s \n", elapsed)
