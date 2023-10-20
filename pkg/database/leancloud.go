@@ -35,7 +35,7 @@ func UploadLog(content string) error {
 
 func GetLogs() ([]Log, error) {
 	var res []Log
-	err := Client.Class("logs").NewQuery().Find(&res)
+	err := Client.Class("logs").NewQuery().Order("-createdAt").Limit(100).Find(&res)
 	if err != nil {
 		return nil, errors.Wrap(err, "获取日志数据失败")
 	}
