@@ -91,7 +91,7 @@ func (s Session) GetSignList() (SignList, error) {
 	}
 	result := SignList{}
 	for _, v := range data.Data {
-		if v.Type != 0 && v.SignStatus != 1 {
+		if v.Type == 0 && v.SignStatus == 1 {
 			result.SignList = append(result.SignList, struct {
 				SignId   string `json:"signId"`
 				Id       string `json:"id"`
