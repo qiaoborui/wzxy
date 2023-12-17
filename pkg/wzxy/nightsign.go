@@ -4,10 +4,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/pkg/errors"
 	"net/http"
 	"net/url"
 	"wobuzaixiaoyuan/pkg/common"
+
+	"github.com/pkg/errors"
 )
 
 type Area struct {
@@ -25,7 +26,6 @@ type SignList struct {
 		AreaList []Area `json:"areaList"`
 		SchoolId string `json:"schoolId"`
 		AreaId   string `json:"areaId"`
-		RawData  string `json:"rawData"`
 	}
 }
 
@@ -98,7 +98,6 @@ func (s Session) GetSignList() (SignList, error) {
 				AreaList []Area `json:"areaList"`
 				SchoolId string `json:"schoolId"`
 				AreaId   string `json:"areaId"`
-				RawData  string `json:"rawData"`
 			}{SignId: v.SignID, Id: v.ID, AreaList: v.AreaList, SchoolId: v.SchoolID, AreaId: v.AreaID})
 		}
 
