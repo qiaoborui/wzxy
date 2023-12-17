@@ -65,7 +65,7 @@ func (s Session) Login() error {
 		return errors.Wrap(err, "error unmarshalling response body")
 	}
 	if resp.Code != 0 {
-		return fmt.Errorf("login failed")
+		return errors.Wrap(fmt.Errorf(string(body)), "error logging in")
 	}
 	return nil
 }

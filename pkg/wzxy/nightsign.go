@@ -23,6 +23,9 @@ type SignList struct {
 		SignId   string `json:"signId"`
 		Id       string `json:"id"`
 		AreaList []Area `json:"areaList"`
+		SchoolId string `json:"schoolId"`
+		AreaId   string `json:"areaId"`
+		RawData  string `json:"rawData"`
 	}
 }
 
@@ -88,12 +91,15 @@ func (s Session) GetSignList() (SignList, error) {
 	}
 	result := SignList{}
 	for _, v := range data.Data {
-		if v.Type == 0 && v.SignStatus == 1 {
+		if v.Type != 0 && v.SignStatus != 1 {
 			result.SignList = append(result.SignList, struct {
 				SignId   string `json:"signId"`
 				Id       string `json:"id"`
 				AreaList []Area `json:"areaList"`
-			}{SignId: v.SignID, Id: v.ID, AreaList: v.AreaList})
+				SchoolId string `json:"schoolId"`
+				AreaId   string `json:"areaId"`
+				RawData  string `json:"rawData"`
+			}{SignId: v.SignID, Id: v.ID, AreaList: v.AreaList, SchoolId: v.SchoolID, AreaId: v.AreaID})
 		}
 
 	}
@@ -128,14 +134,14 @@ func (s Session) Sign() error {
 			Latitude:   lat,
 			Province:   "陕西省",
 			City:       "西安市",
-			AreaJson:   AreaListToAreaJson(v.AreaList),
-			CityCode:   "156610100",
+			AreaJson:   AreaListToAreaJson(v.AreaList, v.AreaId),
+			CityCode:   "",
 			Adcode:     "610118",
 			District:   "鄠邑区",
 			Country:    "中国",
-			Towncode:   "610118006",
+			Towncode:   "",
 			Township:   "草堂街道",
-			StreetCode: "94871608551973499",
+			StreetCode: "",
 			Street:     "关中环线",
 			NationCode: "156",
 		}
@@ -148,7 +154,7 @@ func (s Session) Sign() error {
 		query := u.Query()
 		query.Set("id", v.Id)
 		query.Set("signId", v.SignId)
-		query.Set("schoolId", "19")
+		query.Set("schoolId", v.SchoolId)
 		u.RawQuery = query.Encode()
 		req, err := http.NewRequest("POST", u.String(), bytes.NewBuffer([]byte(requestData)))
 		if err != nil {
@@ -173,9 +179,9 @@ func (s Session) Sign() error {
 	return nil
 }
 
-func AreaListToAreaJson(areaList []Area) string {
+func AreaListToAreaJson(areaList []Area, areaId string) string {
 	for _, v := range areaList {
-		if v.ID == "190002" {
+		if v.ID == areaId {
 			Type := v.Shape
 			latitude := v.Latitude
 			longitude := v.Longitude
