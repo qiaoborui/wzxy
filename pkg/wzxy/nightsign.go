@@ -25,7 +25,7 @@ type SignList struct {
 		Id       string `json:"id"`
 		AreaList []Area `json:"areaList"`
 		SchoolId string `json:"schoolId"`
-		AreaId   string `json:"areaId"`
+		UserArea string `json:"userArea"`
 	}
 }
 
@@ -70,6 +70,7 @@ type ListResponse struct {
 		Township   string `json:"township,omitempty"`
 		Type       int    `json:"type"`
 		UserID     string `json:"userId"`
+		UserArea   string `json:"userArea"`
 	} `json:"data"`
 }
 
@@ -97,8 +98,8 @@ func (s Session) GetSignList() (SignList, error) {
 				Id       string `json:"id"`
 				AreaList []Area `json:"areaList"`
 				SchoolId string `json:"schoolId"`
-				AreaId   string `json:"areaId"`
-			}{SignId: v.SignID, Id: v.ID, AreaList: v.AreaList, SchoolId: v.SchoolID, AreaId: v.AreaID})
+				UserArea string `json:"userArea"`
+			}{SignId: v.SignID, Id: v.ID, AreaList: v.AreaList, SchoolId: v.SchoolID, UserArea: v.UserArea})
 		}
 
 	}
@@ -133,15 +134,15 @@ func (s Session) Sign() error {
 			Latitude:   lat,
 			Province:   "陕西省",
 			City:       "西安市",
-			AreaJson:   AreaListToAreaJson(v.AreaList, v.AreaId),
+			AreaJson:   AreaListToAreaJson(v.AreaList, v.UserArea),
 			CityCode:   "",
 			Adcode:     "610118",
 			District:   "鄠邑区",
 			Country:    "中国",
 			Towncode:   "",
-			Township:   "草堂街道",
+			Township:   "",
 			StreetCode: "",
-			Street:     "关中环线",
+			Street:     "",
 			NationCode: "156",
 		}
 		requestData, _ := json.Marshal(jsonRequestBody)
@@ -166,21 +167,23 @@ func (s Session) Sign() error {
 		}
 		defer resp.Body.Close()
 		var data Response
-		err = json.NewDecoder(resp.Body).Decode(&data)
+		if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
+			return errors.Wrap(err, "error decoding response")
+		}
 
 		if data.Code == 0 {
 			s.User.Result <- fmt.Sprintf("[%s]签到成功", s.User.RealName)
 		} else {
-			s.User.Result <- fmt.Sprintf("[%s]签到失败,响应：", s.User.RealName, data.Message)
+			s.User.Result <- fmt.Sprintf("[%s]签到失败,响应：%s", s.User.RealName, data.Message)
 		}
 	}
 
 	return nil
 }
 
-func AreaListToAreaJson(areaList []Area, areaId string) string {
+func AreaListToAreaJson(areaList []Area, userArea string) string {
 	for _, v := range areaList {
-		if v.ID == areaId {
+		if v.Name == userArea {
 			Type := v.Shape
 			latitude := v.Latitude
 			longitude := v.Longitude
@@ -190,7 +193,7 @@ func AreaListToAreaJson(areaList []Area, areaId string) string {
 			result := fmt.Sprintf("{\"type\":%d,\"circle\":{\"latitude\":\"%s\",\"longitude\":\"%s\",\"radius\":%d},\"id\":\"%s\",\"name\":\"%s\"}", Type, latitude, longitude, radius, id, name)
 			return result
 		} else {
-			fmt.Println(v.ID)
+			fmt.Println(v.Name)
 		}
 	}
 	return ""

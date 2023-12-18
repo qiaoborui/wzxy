@@ -15,7 +15,7 @@ func main() {
 	}
 	c := cron.New()
 	updateSpec := "0 30 * * * *"
-	checkinSpec := "0 */5 * * * *"
+	checkinSpec := "0 */1 * * * *"
 	resetSpec := "0 0 0 * * *"
 	err = c.AddFunc(updateSpec, instance.UpdateData)
 	if err != nil {
