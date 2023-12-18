@@ -1,9 +1,10 @@
 package main
 
 import (
-	"github.com/robfig/cron"
 	"log"
 	"wobuzaixiaoyuan/pkg/logServer"
+
+	"github.com/robfig/cron"
 )
 
 func main() {
@@ -15,7 +16,7 @@ func main() {
 	}
 	c := cron.New()
 	updateSpec := "0 30 * * * *"
-	checkinSpec := "0 */1 * * * *"
+	checkinSpec := "30 */5 * * * *"
 	resetSpec := "0 0 0 * * *"
 	err = c.AddFunc(updateSpec, instance.UpdateData)
 	if err != nil {
