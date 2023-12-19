@@ -50,26 +50,13 @@ type SignData struct {
 type ListResponse struct {
 	Code int `json:"code"`
 	Data []struct {
-		Area       string `json:"area,omitempty"`
 		AreaID     string `json:"areaId,omitempty"`
-		City       string `json:"city,omitempty"`
 		AreaList   []Area `json:"areaList"`
-		Country    string `json:"country,omitempty"`
-		Date       int64  `json:"date,omitempty"`
-		District   string `json:"district,omitempty"`
 		ID         string `json:"id"`
-		Latitude   string `json:"latitude,omitempty"`
-		Longitude  string `json:"longitude,omitempty"`
-		Name       string `json:"name"`
-		Province   string `json:"province,omitempty"`
 		SchoolID   string `json:"schoolId"`
 		SignID     string `json:"signId"`
 		SignStatus int    `json:"signStatus"`
-		Start      int64  `json:"start"`
-		Street     string `json:"street,omitempty"`
-		Township   string `json:"township,omitempty"`
 		Type       int    `json:"type"`
-		UserID     string `json:"userId"`
 		UserArea   string `json:"userArea"`
 	} `json:"data"`
 }
@@ -132,18 +119,18 @@ func (s Session) Sign() error {
 			InArea:     1,
 			Longitude:  lng,
 			Latitude:   lat,
-			Province:   "陕西省",
-			City:       "西安市",
+			Province:   "",
+			City:       "",
 			AreaJson:   AreaListToAreaJson(v.AreaList, v.UserArea),
 			CityCode:   "",
-			Adcode:     "610118",
-			District:   "鄠邑区",
-			Country:    "中国",
+			Adcode:     "",
+			District:   "",
+			Country:    "",
 			Towncode:   "",
 			Township:   "",
 			StreetCode: "",
 			Street:     "",
-			NationCode: "156",
+			NationCode: "",
 		}
 		requestData, _ := json.Marshal(jsonRequestBody)
 		u := url.URL{
