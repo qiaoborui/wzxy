@@ -7,11 +7,16 @@ import (
 	"wobuzaixiaoyuan/pkg/common"
 	"wobuzaixiaoyuan/pkg/database"
 	"wobuzaixiaoyuan/pkg/wzxy"
+
+	"github.com/jinzhu/copier"
 )
 
 type Instance struct {
-	EventMap map[string]int
-	Users    []database.User
+	EventMap map[string]*struct {
+		Count  int // <= 2
+		Status int // 0: success, 1: failed
+	}
+	Users []database.User
 }
 
 func NewInstance() (*Instance, error) {
@@ -20,8 +25,11 @@ func NewInstance() (*Instance, error) {
 		return nil, err
 	}
 	return &Instance{
-		Users:    users,
-		EventMap: make(map[string]int),
+		Users: users,
+		EventMap: make(map[string]*struct {
+			Count  int // <= 2
+			Status int // 0: success, 1: failed
+		}),
 	}, nil
 }
 
@@ -37,17 +45,13 @@ func (i *Instance) UpdateData() {
 
 func (i *Instance) CheckInTask() {
 	var checkinUsers []*wzxy.User
-	results := make(chan string, 10)
 	for _, user := range i.Users {
 		// 如果当前时间在用户设置的时间范围内，并且用户今天还没有打过卡
-		if !common.CompareTime(user.Start) && common.CompareTime(user.End) && i.EventMap[user.RealName] < 2 {
-			checkinUsers = append(checkinUsers, &wzxy.User{
-				RealName: user.RealName,
-				Username: user.Username,
-				Password: user.Password,
-				Result:   results,
-			})
-			i.EventMap[user.RealName]++
+		if !common.CompareTime(user.Start) && common.CompareTime(user.End) && i.EventMap[user.RealName].Count < 2 && i.EventMap[user.RealName].Status == 0 {
+			wzxyUser := &wzxy.User{}
+			copier.Copy(&wzxyUser, &user)
+			checkinUsers = append(checkinUsers, wzxyUser)
+			i.EventMap[user.RealName].Count += 1
 		}
 	}
 	if len(checkinUsers) == 0 {
@@ -55,13 +59,20 @@ func (i *Instance) CheckInTask() {
 		log.Printf("没有需要打卡的用户")
 	}
 	if len(checkinUsers) != 0 {
-		wzxy.DoWork(checkinUsers)
+		res := wzxy.DoWork(checkinUsers)
+		for _, result := range res {
+			if result.Status == 0 {
+				i.EventMap[result.RealName].Status = 0
+			} else {
+				i.EventMap[result.RealName].Status = 1
+			}
+		}
 	}
 }
 
 func (i *Instance) ResetEventMap() {
 	log.Printf("重置打卡次数")
 	for _, user := range i.Users {
-		i.EventMap[user.RealName] = 0
+		i.EventMap[user.RealName].Count = 0
 	}
 }

@@ -3,6 +3,7 @@ module wobuzaixiaoyuan
 go 1.20
 
 require (
+	github.com/jinzhu/copier v0.4.0
 	github.com/leancloud/go-sdk v0.3.2
 	github.com/pkg/errors v0.9.1
 	github.com/robfig/cron v1.2.0
